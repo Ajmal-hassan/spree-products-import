@@ -1,7 +1,6 @@
-require 'csv'
-
-class Spree::ProductImport < ActiveRecord::Base
-
+class Spree::ProductImport < Spree::Base
+  require 'csv'
+  has_one_attached :image
   # CONSTANTS
   IMPORTABLE_PRODUCT_FIELDS = [:slug, :name, :price, :cost_price, :available_on, :shipping_category,
                                :tax_category, :taxons, :option_types, :description].to_set
@@ -16,40 +15,31 @@ class Spree::ProductImport < ActiveRecord::Base
 
   OPTIONS_SEPERATOR = '->'
 
-  # attachments
-  has_attached_file :variants_csv
-  has_attached_file :products_csv
-
-  # validations
-  validates_attachment :variants_csv, :products_csv, content_type: { content_type: ["text/csv", "text/plain"] }
-
-  validates :variants_csv, presence: true, unless: -> { products_csv.present? }
-  validates :products_csv, presence: true, unless: -> { variants_csv.present? }
 
   # callbacks
-  after_commit :start_product_import
+  after_save :start_product_import
 
   private
 
   def start_product_import
-    import_product_data if products_csv.present?
-    import_variant_data if variants_csv.present?
+    import_product_data if image.present?
   end
 
-  handle_asynchronously :start_product_import
+  # handle_asynchronously :start_product_import
 
   def import_product_data
     failed_import = []
-    CSV.foreach(products_csv.path, headers: true, header_converters: :symbol) do |product_data|
+    file_path = Rails.root.join("public", "sample.csv")
+    CSV.foreach(file_path , headers: true, header_converters: :symbol) do |product_data|
       unless import_product_from(product_data)
         failed_import << product_data
       end
     end
     if failed_import.empty?
-      Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
+      # Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
     else
-      failed_import_csv = build_csv_from_failed_import_list(failed_import)
-      Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
+      # failed_import_csv = build_csv_from_failed_import_list(failed_import)
+      # Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
     end
   end
 
@@ -71,10 +61,9 @@ class Spree::ProductImport < ActiveRecord::Base
   def create_or_update_product(product_data_row)
     product_properties = build_properties_hash(product_data_row, IMPORTABLE_PRODUCT_FIELDS, RELATED_PRODUCT_FIELDS)
     product_properties[:tax_category] = Spree::TaxCategory.find_or_create_by!(name: product_properties[:tax_category])
-    product_properties[:shipping_category] = Spree::ShippingCategory.find_or_create_by!(name: product_properties[:shipping_category])
-    product = Spree::Product.find_or_initialize_by(slug: product_properties[:slug])
-    product.update!(product_properties)
-    product
+    product_properties[:shipping_category] = Spree::ShippingCategory.find_by(name: 'Default')
+    product = Spree::Product.new(product_properties)
+    product.save!
   end
 
   def set_missing_product_options(product, product_data_row)

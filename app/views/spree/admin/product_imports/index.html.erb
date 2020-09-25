@@ -8,14 +8,8 @@
   <%= form_for @product_import, url: admin_product_imports_path(@product_import) do |f| %>
     <div class="row">
       <div class="form-group col-sm-6">
-        <%= f.label :variants_csv, class: 'col-sm-6 control-label'%>
-        <%= f.file_field :variants_csv, class: 'col-sm-3 form-control' %>
-      </div>
-    </div>
-    <div class="row">
-      <div class="form-group col-sm-6">
         <%= f.label :products_csv, class: 'col-sm-6 control-label' %>
-        <%= f.file_field :products_csv, class: 'col-sm-3 form-control' %>
+        <%= f.file_field :image %>
       </div>
     </div>
     <div class="form-actions">

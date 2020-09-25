@@ -15,7 +15,7 @@ class Spree::Admin::ProductImportsController < Spree::Admin::BaseController
 
   private
     def product_import_params
-      params.permit(product_import: [:variants_csv, :products_csv])
+      params.permit(product_import: [:image])
     end
 
 
