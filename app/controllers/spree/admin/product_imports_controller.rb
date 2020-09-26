@@ -7,7 +7,7 @@ class Spree::Admin::ProductImportsController < Spree::Admin::BaseController
   def create
     @product_import = Spree::ProductImport.new(product_import_params[:product_import])
     if @product_import.save
-      redirect_to admin_url, notice: "Import process started successfully"
+      redirect_to spree.admin_products_url, notice: "Import process started successfully"
     else
       render :index
     end

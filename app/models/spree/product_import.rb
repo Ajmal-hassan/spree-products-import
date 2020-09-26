@@ -36,10 +36,10 @@ class Spree::ProductImport < Spree::Base
       end
     end
     if failed_import.empty?
-      Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
+      # Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
     else
-      failed_import_csv = build_csv_from_failed_import_list(failed_import)
-      Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
+      # failed_import_csv = build_csv_from_failed_import_list(failed_import)
+      # Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
     end
   end
 
@@ -64,6 +64,7 @@ class Spree::ProductImport < Spree::Base
     product_properties[:shipping_category] = Spree::ShippingCategory.find_by(name: 'Default')
     product = Spree::Product.new(product_properties)
     product.save!
+    product
   end
 
   def set_missing_product_options(product, product_data_row)
@@ -90,7 +91,7 @@ class Spree::ProductImport < Spree::Base
         product = create_or_update_product(product_data_row)
         set_missing_product_options(product, product_data_row)
         add_taxons(product, product_data_row)
-        add_images(product, product_data_row[:images])
+        # add_images(product, product_data_row[:images])
       end
     rescue Exception
       false
