@@ -1,6 +1,6 @@
 class Spree::ProductImport < Spree::Base
   require 'csv'
-  has_one_attached :image
+  has_one_attached :csv_file
   # CONSTANTS
   IMPORTABLE_PRODUCT_FIELDS = [:slug, :name, :price, :cost_price, :available_on, :shipping_category,
                                :tax_category, :taxons, :option_types, :description].to_set
@@ -17,12 +17,12 @@ class Spree::ProductImport < Spree::Base
 
 
   # callbacks
-  after_save :start_product_import
+  after_commit :start_product_import
 
   private
 
   def start_product_import
-    import_product_data if image.present?
+    import_product_data if csv_file.present?
   end
 
   # handle_asynchronously :start_product_import
@@ -36,10 +36,10 @@ class Spree::ProductImport < Spree::Base
       end
     end
     if failed_import.empty?
-      # Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
+      Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
     else
-      # failed_import_csv = build_csv_from_failed_import_list(failed_import)
-      # Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
+      failed_import_csv = build_csv_from_failed_import_list(failed_import)
+      Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
     end
   end
 
