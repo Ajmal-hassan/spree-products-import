@@ -2,7 +2,7 @@ class Spree::ProductImport < Spree::Base
   require 'csv'
   has_one_attached :csv_file
   # CONSTANTS
-  IMPORTABLE_PRODUCT_FIELDS = [:slug, :name, :price, :cost_price, :available_on, :shipping_category,
+  IMPORTABLE_PRODUCT_FIELDS = [:sku, :name, :price, :cost_price, :available_on, :shipping_category,
                                :tax_category, :taxons, :option_types, :description].to_set
   IMPORTABLE_VARIANT_FIELDS = [:sku, :slug, :cost_price, :cost_currency, :tax_category,
                                :stock_items_count, :option_values].to_set
@@ -15,31 +15,33 @@ class Spree::ProductImport < Spree::Base
 
   OPTIONS_SEPERATOR = '->'
 
-
+  def start_product_import
+    import_product_data
+  end
   # callbacks
   after_commit :start_product_import
 
   private
 
-  def start_product_import
-    import_product_data if csv_file.present?
-  end
-
   # handle_asynchronously :start_product_import
 
   def import_product_data
     failed_import = []
-    file_path = Rails.root.join("public", "sample.csv")
-    CSV.foreach(file_path , headers: true, header_converters: :symbol) do |product_data|
-      unless import_product_from(product_data)
-        failed_import << product_data
+    file_path = Rails.root.join("public/uploads", "sample.csv")
+    if file_path.exist?
+      CSV.foreach(file_path , headers: true, header_converters: :symbol) do |product_data|
+        unless import_product_from(product_data)
+          failed_import << product_data
+        end
       end
-    end
-    if failed_import.empty?
-      # Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
+      if failed_import.empty?
+        # Spree::ProductImportMailer.import_data_success_email(id, "products_csv").deliver_later
+      else
+        # failed_import_csv = build_csv_from_failed_import_list(failed_import)
+        # Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
+      end
     else
-      # failed_import_csv = build_csv_from_failed_import_list(failed_import)
-      # Spree::ProductImportMailer.import_data_failure_email(id, "products_csv", failed_import_csv).deliver_later
+      self.errors.add(:base, "upload file does not exist")
     end
   end
 
@@ -60,7 +62,7 @@ class Spree::ProductImport < Spree::Base
 
   def create_or_update_product(product_data_row)
     product_properties = build_properties_hash(product_data_row, IMPORTABLE_PRODUCT_FIELDS, RELATED_PRODUCT_FIELDS)
-    product_properties[:tax_category] = Spree::TaxCategory.find_or_create_by!(name: product_properties[:tax_category])
+    # product_properties[:tax_category] = Spree::TaxCategory.find_or_create_by!(name: product_properties[:tax_category])
     product_properties[:shipping_category] = Spree::ShippingCategory.find_by(name: 'Default')
     product = Spree::Product.new(product_properties)
     product.save!
@@ -89,8 +91,8 @@ class Spree::ProductImport < Spree::Base
     begin
       ActiveRecord::Base.transaction do
         product = create_or_update_product(product_data_row)
-        set_missing_product_options(product, product_data_row)
-        add_taxons(product, product_data_row)
+        # set_missing_product_options(product, product_data_row)
+        # add_taxons(product, product_data_row)
         # add_images(product, product_data_row[:images])
       end
     rescue Exception
